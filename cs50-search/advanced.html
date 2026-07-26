@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Google Advanced Search</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="top-nav">
+        <a href="index.html">Google Search</a>
+    </header>
+
+    <main class="advanced-container">
+        <h2 class="advanced-title">Advanced Search</h2>
+        <hr>
+
+        <form action="https://www.google.com/search" method="GET" class="advanced-form">
+            <p class="form-heading">Find pages with...</p>
+
+            <div class="form-group">
+                <label for="all">all these words:</label>
+                <input type="text" id="all" name="as_q" class="adv-input">
+            </div>
+
+            <div class="form-group">
+                <label for="exact">this exact word or phrase:</label>
+                <input type="text" id="exact" name="as_epq" class="adv-input">
+            </div>
+
+            <div class="form-group">
+                <label for="any">any of these words:</label>
+                <input type="text" id="any" name="as_oq" class="adv-input">
+            </div>
+
+            <div class="form-group">
+                <label for="none">none of these words:</label>
+                <input type="text" id="none" name="as_eq" class="adv-input">
+            </div>
+
+            <div class="form-group button-group">
+                <input type="submit" value="Advanced Search" class="btn-advanced">
+            </div>
+        </form>
+    </main>
+</body>
+</html>

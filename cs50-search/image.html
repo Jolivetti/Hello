@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Google Images</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="top-nav">
+        <a href="index.html">Google Search</a>
+    </header>
+
+    <main class="search-container">
+        <h1 class="logo">Google <span class="sub-logo">images</span></h1>
+
+        <form action="https://www.google.com/search" method="GET">
+            <!-- Hidden input tells Google to perform an Image Search -->
+            <input type="hidden" name="tbm" value="isch">
+            
+            <div class="search-box">
+                <input type="text" name="q" class="search-input" autofocus required>
+            </div>
+            
+            <div class="buttons">
+                <input type="submit" value="Search Images" class="btn">
+            </div>
+        </form>
+    </main>
+</body>
+</html>
