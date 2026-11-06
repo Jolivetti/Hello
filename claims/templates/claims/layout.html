@@ -1,0 +1,519 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ user.firm.name|default:"LegalCRM" }} | Enterprise Litigation Cloud{% endblock %}</title>
+
+    <!-- PWA Manifest & Metadata -->
+    <link rel="manifest" href="{% static 'claims/manifest.json' %}">
+    <meta name="theme-color" content="#030406">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="{% static 'claims/laurel_crest.png' %}">
+
+    <!-- Typography: Inter & Source Serif 4 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Source+Serif+4:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3.3 & Lucide Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --firm-obsidian: #030406;
+            --firm-surface: #F8FAFC;
+            --firm-card-bg: #FFFFFF;
+            --firm-border: #E2E8F0;
+            --firm-primary-blue: {{ user.firm.primary_color|default:"#1D4ED8" }};
+            --firm-gold: #D4AF37;
+            --firm-text-primary: #0F172A;
+            --firm-text-secondary: #64748B;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background-color: var(--firm-surface);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--firm-text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .navbar-firm {
+            background-color: var(--firm-obsidian);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+            min-height: 74px;
+        }
+
+        .firm-brand-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #FFFFFF;
+            line-height: 1.1;
+        }
+
+        .firm-brand-sub {
+            font-size: 9px;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #FBBF24;
+            display: block;
+            margin-top: 3px;
+        }
+
+        .navbar-firm .nav-link {
+            color: #94A3B8;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.5rem 0.85rem;
+            border-radius: 6px;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .navbar-firm .nav-link:hover,
+        .navbar-firm .nav-link.active {
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-intake {
+            background-color: var(--firm-primary-blue);
+            border: 1px solid var(--firm-primary-blue);
+            color: #FFFFFF;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.45rem 0.95rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            transition: all 0.15s ease;
+        }
+
+        .btn-intake:hover {
+            filter: brightness(1.15);
+            color: #FFFFFF;
+        }
+
+        .role-tag {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            color: #FBBF24;
+        }
+
+        .user-chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 4px 12px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar-initial {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #1E293B;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            color: #FBBF24;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .nav-message-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .nav-message-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #CBD5E1;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .nav-message-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+
+        .unread-indicator-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 10px;
+            height: 10px;
+            background-color: #EF4444;
+            border: 2px solid var(--firm-obsidian);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #EF4444;
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .card {
+            border: 1px solid var(--firm-border) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+            background-color: var(--firm-card-bg);
+        }
+
+        .table {
+            font-size: 0.875rem;
+        }
+
+        .table th {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--firm-text-secondary);
+            background-color: #F1F5F9 !important;
+            border-bottom: 1px solid var(--firm-border);
+        }
+
+        .footer-firm {
+            background-color: var(--firm-obsidian);
+            border-top: 1px solid #18181B;
+            color: #71717A;
+            font-size: 0.75rem;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-firm py-2">
+        <div class="container-fluid px-3 px-lg-4">
+            
+            <!-- Dynamic Brand / White-Label Identity -->
+            <a class="navbar-brand d-flex align-items-center gap-3 text-decoration-none me-4" href="{% url 'index' %}">
+                {% if user.firm and user.firm.logo %}
+                    <img src="{{ user.firm.logo.url }}" 
+                         alt="{{ user.firm.name }}" 
+                         style="height: 58px; width: auto; max-width: 180px;" 
+                         class="d-inline-block object-fit-contain"
+                         onerror="this.style.display='none'">
+                    <div>
+                        <span class="firm-brand-title">{{ user.firm.name }}</span>
+                        <span class="firm-brand-sub">CLIENT LITIGATION CLOUD</span>
+                    </div>
+                {% elif user.medical_facility %}
+                    <div class="d-inline-flex p-2 rounded bg-primary bg-opacity-25 text-primary">
+                        <i data-lucide="cross" style="width: 28px; height: 28px;"></i>
+                    </div>
+                    <div>
+                        <span class="firm-brand-title">{{ user.medical_facility.name }}</span>
+                        <span class="firm-brand-sub">MEDICAL PROVIDER PORTAL</span>
+                    </div>
+                {% else %}
+                    <img src="{% static 'claims/laurel_crest.png' %}" 
+                         alt="LegalCRM Crest" 
+                         style="height: 62px; width: 62px; min-width: 62px; object-fit: contain; transform: scale(1.35);" 
+                         class="d-inline-block"
+                         onerror="this.style.display='none'">
+                    <div>
+                        <span class="firm-brand-title">LegalCRM</span>
+                        <span class="firm-brand-sub">ENTERPRISE LITIGATION CLOUD</span>
+                    </div>
+                {% endif %}
+            </a>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center">
+                    {% if user.is_authenticated %}
+                        
+                        <!-- 1. SuperAdmin Navigation -->
+                        {% if user.role == 'SUPERADMIN' %}
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'superadmin_dashboard' %}">
+                                    <i data-lucide="shield-alert" style="width: 15px; height: 15px;" class="text-danger"></i>
+                                    Master Admin
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'index' %}">
+                                    <i data-lucide="layout-dashboard" style="width: 15px; height: 15px;"></i>
+                                    Case Workspace
+                                </a>
+                            </li>
+                            <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                                <a class="btn-intake text-decoration-none" href="{% url 'new_case' %}">
+                                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                                    New Intake
+                                </a>
+                            </li>
+
+                        <!-- 2. Law Firm Administrator Navigation -->
+                        {% elif user.role == 'FIRM_ADMIN' %}
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'index' %}">
+                                    <i data-lucide="layout-dashboard" style="width: 15px; height: 15px;"></i>
+                                    Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'firm_admin' %}">
+                                    <i data-lucide="settings" style="width: 15px; height: 15px;" class="text-warning"></i>
+                                    Firm Admin & Templates
+                                </a>
+                            </li>
+                            <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                                <a class="btn-intake text-decoration-none" href="{% url 'new_case' %}">
+                                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                                    New Intake
+                                </a>
+                            </li>
+
+                        <!-- 3. Attorneys & Case Managers Navigation -->
+                        {% elif user.role == 'ATTORNEY' or user.role == 'CASE_MANAGER' %}
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'index' %}">
+                                    <i data-lucide="layout-dashboard" style="width: 15px; height: 15px;"></i>
+                                    Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                                <a class="btn-intake text-decoration-none" href="{% url 'new_case' %}">
+                                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                                    New Intake
+                                </a>
+                            </li>
+
+                        <!-- 4. Medical Provider Facility Navigation -->
+                        {% elif user.role == 'MEDICAL_PROVIDER' %}
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'medical_portal' %}">
+                                    <i data-lucide="stethoscope" style="width: 15px; height: 15px;" class="text-primary"></i>
+                                    Patient Referrals Portal
+                                </a>
+                            </li>
+
+                        <!-- 5. Client Navigation -->
+                        {% elif user.role == 'CLIENT' %}
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1.5" href="{% url 'client_portal' %}">
+                                    <i data-lucide="folder-check" style="width: 15px; height: 15px;"></i>
+                                    My Claim
+                                </a>
+                            </li>
+                        {% endif %}
+
+                    {% endif %}
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-3">
+                    {% if user.is_authenticated %}
+                        
+                        <!-- Role & Tenant Organization Badge -->
+                        <li class="nav-item d-none d-md-block">
+                            <span class="role-tag">
+                                {% if user.firm %}
+                                    {{ user.firm.name }} &bull; 
+                                {% elif user.medical_facility %}
+                                    {{ user.medical_facility.name }} &bull; 
+                                {% endif %}
+                                {{ user.get_role_display|upper }}
+                            </span>
+                        </li>
+
+                        <!-- Message Center Envelope -->
+                        {% if user.role != 'MEDICAL_PROVIDER' %}
+                            <li class="nav-item">
+                                <div class="nav-message-wrapper">
+                                    <a class="nav-message-btn text-decoration-none" href="{% url 'inbox' %}" id="navInboxBtn" title="Message Center">
+                                        <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
+                                    </a>
+                                    <span id="globalUnreadDot" class="unread-indicator-dot d-none"></span>
+                                </div>
+                            </li>
+                        {% endif %}
+
+                        <!-- User Profile Chip -->
+                        <li class="nav-item d-none d-lg-block">
+                            <div class="user-chip text-white-50 small">
+                                <span class="avatar-initial">
+                                    {{ user.first_name|default:user.username|slice:":1"|upper }}
+                                </span>
+                                <span>Logged in as: <strong class="text-white">{{ user.get_full_name|default:user.username }}</strong></span>
+                            </div>
+                        </li>
+
+                        <!-- Sign Out Button -->
+                        <li class="nav-item">
+                            <a class="btn btn-sm btn-outline-secondary text-slate-300 border-zinc-700 hover:bg-zinc-800 d-inline-flex align-items-center gap-1.5" href="{% url 'logout' %}">
+                                <i data-lucide="log-out" style="width: 13px; height: 13px;"></i>
+                                Sign Out
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link d-inline-flex align-items-center gap-1.5 text-white" href="{% url 'login' %}">
+                                <i data-lucide="log-in" style="width: 14px; height: 14px;"></i>
+                                Sign In
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid px-3 px-lg-4 py-4 flex-grow-1">
+        {% block body %}
+        {% endblock %}
+    </main>
+
+    <!-- Anchored Platform & Engineering Credit Footer -->
+    <footer class="footer-firm py-3 mt-auto">
+        <div class="container-fluid px-3 px-lg-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-zinc-400">Designed & Engineered by</span>
+                <img src="{% static 'claims/olivetti_group.png' %}" 
+                     alt="The Olivetti Group" 
+                     style="height: 28px; width: auto;" 
+                     class="object-contain"
+                     onerror="this.outerHTML='<span class=\'fw-bold text-light small\'>THE OLIVETTI GROUP</span>';">
+            </div>
+
+            <div class="d-flex align-items-center gap-3 text-zinc-500">
+                <span>&copy; 2026 LegalCRM Technologies Inc. All rights reserved.</span>
+                <span class="d-none d-sm-inline opacity-25">|</span>
+                <span class="d-none d-sm-inline d-flex align-items-center gap-1 text-amber-400">
+                    <i data-lucide="lock" style="width: 12px; height: 12px;"></i>
+                    Authorized Multi-Tenant Cloud
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Native PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .catch(error => {
+                        console.debug('Service Worker registration skipped or failed:', error);
+                    });
+            });
+        }
+
+        // Native PWA App Badge & Polling Engine
+        let lastReportedUnread = 0;
+
+        function updateNativeAppBadge(count) {
+            if ('setAppBadge' in navigator) {
+                if (count > 0) {
+                    navigator.setAppBadge(count).catch(err => console.debug('AppBadge error:', err));
+                } else {
+                    navigator.clearAppBadge().catch(err => console.debug('ClearBadge error:', err));
+                }
+            }
+        }
+
+        function triggerNativeOsBanner(count) {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'granted') {
+                const title = count === 1 ? 'LegalCRM: New Message' : `LegalCRM: ${count} New Messages`;
+                const options = {
+                    body: 'A priority client communication requires your attention in the Message Center.',
+                    icon: "{% static 'claims/laurel_crest.png' %}",
+                    badge: "{% static 'claims/laurel_crest.png' %}",
+                    tag: 'legalcrm-new-message'
+                };
+                new Notification(title, options);
+            }
+        }
+
+        function checkUnreadMessages() {
+            fetch("{% url 'api_unread_count' %}")
+                .then(res => res.json())
+                .then(data => {
+                    const dot = document.getElementById('globalUnreadDot');
+                    const unreadCount = data.unread || 0;
+
+                    if (dot) {
+                        if (unreadCount > 0) {
+                            dot.classList.remove('d-none');
+                        } else {
+                            dot.classList.add('d-none');
+                        }
+                    }
+
+                    updateNativeAppBadge(unreadCount);
+
+                    if (unreadCount > lastReportedUnread && unreadCount > 0) {
+                        triggerNativeOsBanner(unreadCount);
+                    }
+                    lastReportedUnread = unreadCount;
+                })
+                .catch(err => console.debug('Notification Poller error:', err));
+        }
+
+        function requestNotificationAccess() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted' && lastReportedUnread > 0) {
+                        triggerNativeOsBanner(lastReportedUnread);
+                    }
+                });
+            }
+        }
+    </script>
+
+    {% if user.is_authenticated and user.role != 'MEDICAL_PROVIDER' %}
+    <script>
+        checkUnreadMessages();
+        setInterval(checkUnreadMessages, 10000);
+
+        document.addEventListener('click', function initNotify() {
+            requestNotificationAccess();
+            document.removeEventListener('click', initNotify);
+        }, { once: true });
+    </script>
+    {% endif %}
+</body>
+</html>

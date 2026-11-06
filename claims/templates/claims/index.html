@@ -1,0 +1,149 @@
+{% extends "claims/layout.html" %}
+
+{% block body %}
+<style>
+    /* Status Badge Palette (Muted Executive Tones) */
+    .badge-status {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.65rem;
+        border-radius: 9999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+    }
+    .badge-status:hover {
+        transform: scale(1.04);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+    .status-intake { background-color: #FEF3C7; color: #92400E; }
+    .status-treatment { background-color: #E0F2FE; color: #0369A1; }
+    .status-demand { background-color: #F3E8FF; color: #6B21A8; }
+    .status-negotiation { background-color: #EEF2FF; color: #3730A3; }
+    .status-litigation { background-color: #FFE4E6; color: #9F1239; }
+    .status-settled { background-color: #D1FAE5; color: #065F46; }
+</style>
+
+<div class="container-fluid px-0">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Claim Management Dashboard</h2>
+        <p class="text-muted small mb-0">Welcome back, {{ user.get_full_name|default:user.username }} ({% if user.role == 'ATTORNEY' %}Attorney{% elif user.role == 'CASE_MANAGER' %}Case Manager{% else %}Staff{% endif %}).</p>
+    </div>
+
+    <!-- Stage Filter Pills -->
+    <div class="card border-0 shadow-sm mb-4 p-2">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <a href="{% url 'index' %}{% if is_assigned %}?my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if not current_filter %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                All Claims <span class="badge {% if not current_filter %}bg-secondary text-white{% else %}bg-white text-dark{% endif %} ms-1">{{ total_cases }}</span>
+            </a>
+            <a href="{% url 'index' %}?status=INTAKE{% if is_assigned %}&my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if current_filter == 'INTAKE' %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                Intake <span class="badge bg-secondary text-white ms-1">{{ intake_count }}</span>
+            </a>
+            <a href="{% url 'index' %}?status=TREATMENT{% if is_assigned %}&my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if current_filter == 'TREATMENT' %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                Treatment <span class="badge bg-secondary text-white ms-1">{{ treatment_count }}</span>
+            </a>
+            <a href="{% url 'index' %}?status=DEMAND{% if is_assigned %}&my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if current_filter == 'DEMAND' %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                Demand <span class="badge bg-secondary text-white ms-1">{{ demand_count }}</span>
+            </a>
+            <a href="{% url 'index' %}?status=NEGOTIATIONS{% if is_assigned %}&my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if current_filter == 'NEGOTIATIONS' %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                Negotiation <span class="badge bg-secondary text-white ms-1">{{ negotiations_count }}</span>
+            </a>
+            <a href="{% url 'index' %}?status=LITIGATION{% if is_assigned %}&my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if current_filter == 'LITIGATION' %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                Litigation <span class="badge bg-secondary text-white ms-1">{{ litigation_count }}</span>
+            </a>
+            <a href="{% url 'index' %}?status=SETTLED{% if is_assigned %}&my_cases=true{% endif %}" class="btn btn-sm rounded-pill {% if current_filter == 'SETTLED' %}btn-dark{% else %}btn-light text-secondary{% endif %} px-3">
+                Settled <span class="badge bg-secondary text-white ms-1">{{ settled_count }}</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Claims Ledger Header -->
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <h4 class="fw-bold mb-0">Active Claims Ledger</h4>
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="{% url 'index' %}?my_cases=true{% if current_filter %}&status={{ current_filter }}{% endif %}" 
+               class="btn {% if is_assigned %}btn-secondary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-secondary{% endif %}">
+                My Assigned Cases
+            </a>
+            <a href="{% url 'index' %}{% if current_filter %}?status={{ current_filter }}{% endif %}" 
+               class="btn {% if not is_assigned %}btn-secondary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-secondary{% endif %}">
+                View All
+            </a>
+        </div>
+    </div>
+
+    <!-- Claims Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Case #</th>
+                        <th>Client Name</th>
+                        <th>Incident Date</th>
+                        <th>Current Stage (Click to Edit)</th>
+                        <th>Assigned Attorney</th>
+                        <th>Case Manager</th>
+                        <th class="text-end pe-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in cases %}
+                        <tr>
+                            <td class="ps-3 font-monospace fw-bold">
+                                <a href="{% url 'case_detail' case.id %}" class="text-decoration-none text-dark">
+                                    {{ case.case_number }}
+                                </a>
+                            </td>
+                            <td class="fw-semibold text-dark">{{ case.client.first_name }} {{ case.client.last_name }}</td>
+                            <td class="text-secondary">{{ case.incident_date|date:"M d, Y"|default:"Unspecified" }}</td>
+                            <td>
+                                <!-- Clicking on status navigates directly to stage selector in case_detail -->
+                                <a href="{% url 'case_detail' case.id %}#stage-select-box" class="text-decoration-none" title="Click to advance or edit stage for Case #{{ case.case_number }}">
+                                    <span class="badge-status 
+                                        {% if case.status == 'INTAKE' %}status-intake
+                                        {% elif case.status == 'TREATMENT' %}status-treatment
+                                        {% elif case.status == 'DEMAND' %}status-demand
+                                        {% elif case.status == 'NEGOTIATIONS' or case.status == 'NEGOTIATION' %}status-negotiation
+                                        {% elif case.status == 'LITIGATION' %}status-litigation
+                                        {% elif case.status == 'SETTLED' %}status-settled
+                                        {% else %}bg-secondary text-white{% endif %}">
+                                        {{ case.get_status_display }}
+                                    </span>
+                                </a>
+                            </td>
+                            <td>
+                                {% if case.assigned_attorney %}
+                                    {{ case.assigned_attorney.get_full_name|default:case.assigned_attorney.username }}
+                                {% else %}
+                                    <span class="text-danger small fw-semibold">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if case.assigned_case_manager %}
+                                    {{ case.assigned_case_manager.get_full_name|default:case.assigned_case_manager.username }}
+                                {% else %}
+                                    <span class="text-danger small fw-semibold">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-3">
+                                <a href="{% url 'case_detail' case.id %}" class="btn btn-sm btn-outline-dark px-3 text-nowrap">
+                                    Manage File
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted fst-italic">No cases found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

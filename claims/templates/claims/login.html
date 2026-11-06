@@ -1,0 +1,381 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | LegalCRM Enterprise</title>
+
+    <!-- PWA Manifest & App Metadata -->
+    <link rel="manifest" href="{% static 'claims/manifest.json' %}">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="{% static 'claims/laurel_crest.png' %}">
+
+    <!-- Typography: Inter & Source Serif 4 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS & Lucide Vector Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Source Serif 4', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="h-full flex overflow-hidden font-sans antialiased bg-slate-50">
+
+    <div class="flex min-h-full w-full">
+
+        <!-- Left Brand & Hero Canvas (Obsidian with Elevated Lady Justice) -->
+        <div class="relative hidden w-0 flex-1 lg:flex flex-col justify-between bg-black overflow-hidden border-r border-zinc-800">
+            
+            <!-- High-Prominence Lady Justice Backdrop -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden select-none">
+                <img src="{% static 'claims/lady_justice.jpg' %}" 
+                     alt="Lady Justice" 
+                     class="absolute -right-6 -top-12 h-[115%] w-[66%] object-cover object-top opacity-55 contrast-125 brightness-105">
+                
+                <!-- Linear masks: solid black on the left for text contrast, dissolving smoothly into the statue -->
+                <div class="absolute inset-0 bg-gradient-to-r from-black via-black/85 via-45% to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                <!-- Golden ambient aura over the scales -->
+                <div class="absolute -top-24 right-4 w-[500px] h-[500px] rounded-full bg-amber-500/15 blur-[120px]"></div>
+            </div>
+
+            <!-- Top Header: Perfectly aligned with exact left padding and tight logo-to-text gap -->
+            <div class="relative z-15 flex items-center gap-2 px-12 xl:px-16 pt-12 xl:pt-16">
+                <img src="{% static 'claims/laurel_crest.png' %}" 
+                     alt="LegalCRM Crest" 
+                     style="height: 76px; width: 76px; min-width: 76px; object-fit: contain;" 
+                     class="select-none drop-shadow-[0_2px_14px_rgba(212,175,55,0.4)] shrink-0"
+                     onerror="this.style.display='none'">
+                <div class="flex flex-col justify-center">
+                    <span class="font-serif text-3xl xl:text-4xl font-bold tracking-tight text-white block leading-none">LegalCRM</span>
+                    <span class="text-[10px] tracking-[0.26em] uppercase font-semibold text-amber-400 block mt-1.5">ENTERPRISE LITIGATION & HEALTH CLOUD</span>
+                </div>
+            </div>
+
+            <!-- Central Content: Established Messaging & Value Props -->
+            <div class="relative z-10 max-w-xl my-auto py-8 px-12 xl:px-16">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-blue-300 text-xs font-medium mb-6 backdrop-blur-sm">
+                    <span class="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                    Unified Trial & Medical Recovery Ecosystem
+                </div>
+
+                <h1 class="font-serif text-4xl xl:text-5xl font-medium tracking-tight text-white leading-tight">
+                    Eliminating the communication gap between law firms, medical providers, and claimants.
+                </h1>
+
+                <p class="mt-5 text-sm leading-relaxed text-zinc-400">
+                    A centralized infrastructure engineered for high-velocity personal injury litigation, direct lien reconciliation, and transparent client recovery updates.
+                </p>
+
+                <!-- Dual Enterprise Feature Cards -->
+                <div class="mt-10 grid grid-cols-2 gap-4 border-t border-zinc-900/90 pt-8">
+                    <div class="flex items-start gap-3.5 p-4 rounded-xl bg-black/60 border border-zinc-800/80 shadow-sm backdrop-blur-md">
+                        <div class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-blue-400 shrink-0">
+                            <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-zinc-200">Role-Based Access</p>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Strict permission controls for staff, clinics, and clients</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3.5 p-4 rounded-xl bg-black/60 border border-zinc-800/80 shadow-sm backdrop-blur-md">
+                        <div class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-blue-400 shrink-0">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-zinc-200">Centralized Case Ledgers</p>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Direct tracking for treatment records and lien documents</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer: Designed & Engineered by Olivetti Group -->
+            <div class="relative z-10 border-t border-zinc-900/90 py-6 px-12 xl:px-16 flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <span class="text-xs text-zinc-400 whitespace-nowrap">Designed & Engineered by</span>
+                    <img src="{% static 'claims/olivetti_group.png' %}" 
+                         alt="The Olivetti Group" 
+                         style="height: 28px; width: auto;" 
+                         class="object-contain select-none"
+                         onerror="this.onerror=null; this.outerHTML='<span class=\'font-serif font-bold text-xs tracking-wider text-zinc-200\'>THE OLIVETTI GROUP</span>';">
+                </div>
+
+                <div class="flex items-center gap-1.5 text-zinc-400 text-xs">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Authorized Access Only</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Workspace Access Pane -->
+        <div class="flex flex-1 flex-col justify-between px-8 py-10 lg:flex-none lg:w-[480px] sm:px-12 bg-white overflow-y-auto">
+            
+            <!-- Mobile Screen Header (Shown only on small screens) -->
+            <div class="lg:hidden flex items-center space-x-3 mb-6">
+                <img src="{% static 'claims/laurel_crest.png' %}" alt="LegalCRM" style="height: 36px; width: 36px; object-fit: contain;">
+                <div>
+                    <span class="font-serif text-xl font-bold text-slate-900">LegalCRM</span>
+                    <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-semibold">An Olivetti Group Platform</span>
+                </div>
+            </div>
+
+            <!-- Centered Authentication Form -->
+            <div class="mx-auto w-full max-w-sm my-auto py-4">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight text-slate-900">Sign in to workspace</h2>
+                    <p class="mt-2 text-xs text-slate-500">
+                        Enter your firm, clinic, or claimant credentials to access your active files.
+                    </p>
+                </div>
+
+                <div id="loginAlertBox" class="{% if not message %}hidden {% endif %}mt-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2.5 text-xs text-red-700">
+                    <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-red-600"></i>
+                    <span id="loginAlertText">{{ message }}</span>
+                </div>
+
+                <!-- Form Controls -->
+                <form id="loginForm" action="{% url 'login' %}" method="post" class="mt-6 space-y-4">
+                    {% csrf_token %}
+
+                    <div>
+                        <label for="username" class="block text-xs font-semibold text-slate-700">Username or Work Email</label>
+                        <div class="relative mt-1.5">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i data-lucide="mail" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                            <input id="username" name="username" type="text" required autofocus
+                                   class="block w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 transition"
+                                   placeholder="attorney@firm.com">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label for="password" class="block text-xs font-semibold text-slate-700">Password</label>
+                            <a href="{% url 'password_reset' %}" class="text-[11px] font-semibold text-blue-600 hover:text-blue-500 hover:underline">Forgot password?</a>
+                        </div>
+                        <div class="relative mt-1.5">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i data-lucide="lock" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                            <input id="password" name="password" type="password" required
+                                   class="block w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 transition"
+                                   placeholder="••••••••••••">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="remember-me" name="remember-me" type="checkbox"
+                               class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <label for="remember-me" class="ml-2 block text-xs text-slate-600">Keep workstation active for 30 days</label>
+                    </div>
+
+                    <div>
+                        <button type="submit" id="btnSubmitLogin"
+                                class="flex w-full justify-center items-center gap-2 rounded-md bg-blue-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all">
+                            <span>Sign in to Dashboard</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Workspace Registration Link -->
+                <div class="mt-8 border-t border-slate-200 pt-6">
+                    <p class="text-center text-xs text-slate-500">
+                        New claimant or medical provider?
+                        <a href="{% url 'register' %}" class="font-semibold text-blue-600 hover:text-blue-500 hover:underline">Register workspace</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Grounded Bottom Copyright on White Canvas -->
+            <div class="pt-6 border-t border-slate-100 text-center text-[11px] text-slate-400">
+                © 2026 LegalCRM Technologies Inc. All rights reserved.
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Integrated OTP Modal Overlay (Tailwind UI) -->
+    <div id="otpValidationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-sm w-full mx-4 p-6 sm:p-8 text-center text-slate-900">
+            <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="shield-check" class="w-7 h-7"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Verify Your Device</h3>
+            <p class="text-xs text-slate-500 mb-4">
+                A 6-digit authentication code has been generated for <strong id="modalUserDisplay" class="text-slate-800">your account</strong>.
+            </p>
+
+            <div id="otpAlertBox" class="hidden mb-4 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700"></div>
+
+            <form id="otpVerifyForm" method="post" action="{% url 'login' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="verify_otp">
+
+                <div>
+                    <label for="modalOtpCode" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Enter 6-Digit Security Code</label>
+                    <input type="text"
+                           name="otp_code"
+                           id="modalOtpCode"
+                           maxlength="6"
+                           required
+                           autocomplete="one-time-code"
+                           placeholder="••••••"
+                           class="block w-full text-center font-mono text-2xl font-bold tracking-widest py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent">
+                    <p class="text-[11px] text-slate-400 mt-2">Testing locally? Check your VS Code terminal running the server to read the code.</p>
+                </div>
+
+                <button type="submit" id="btnVerifyCode"
+                        class="flex w-full justify-center items-center rounded-md bg-blue-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-800 transition">
+                    Verify Code & Sign In
+                </button>
+                <button type="button" id="btnCancelModal"
+                        class="w-full text-xs text-slate-500 hover:text-slate-700 py-1 transition">
+                    Cancel & Return
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Initialize SVG Vector Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+
+    <!-- Register the PWA Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(registration => {
+                        console.log('LegalCRM PWA registered with root scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+
+    <!-- OTP Modal & Dynamic Authentication Script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const loginForm = document.getElementById("loginForm");
+            const otpModal = document.getElementById("otpValidationModal");
+            const btnCancelModal = document.getElementById("btnCancelModal");
+            const otpVerifyForm = document.getElementById("otpVerifyForm");
+            const loginAlertBox = document.getElementById("loginAlertBox");
+            const loginAlertText = document.getElementById("loginAlertText");
+            const otpAlertBox = document.getElementById("otpAlertBox");
+            const btnSubmitLogin = document.getElementById("btnSubmitLogin");
+            const btnVerifyCode = document.getElementById("btnVerifyCode");
+
+            if (btnCancelModal) {
+                btnCancelModal.addEventListener("click", () => {
+                    otpModal.classList.add("hidden");
+                });
+            }
+
+            if (loginForm) {
+                loginForm.addEventListener("submit", function(e) {
+                    e.preventDefault();
+                    btnSubmitLogin.disabled = true;
+                    btnSubmitLogin.innerHTML = '<span>Validating...</span>';
+                    if (loginAlertBox) loginAlertBox.classList.add("hidden");
+
+                    const formData = new FormData(loginForm);
+
+                    fetch("{% url 'login' %}", {
+                        method: "POST",
+                        body: formData,
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        btnSubmitLogin.disabled = false;
+                        btnSubmitLogin.innerHTML = '<span>Sign in to Dashboard</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>';
+                        lucide.createIcons();
+
+                        if (data.success && data.require_otp) {
+                            if (data.user_display) {
+                                document.getElementById("modalUserDisplay").textContent = data.user_display;
+                            }
+                            if (otpAlertBox) otpAlertBox.classList.add("hidden");
+                            const otpInput = document.getElementById("modalOtpCode");
+                            otpInput.value = "";
+                            otpModal.classList.remove("hidden");
+                            setTimeout(() => otpInput.focus(), 200);
+                        } else if (data.success && !data.require_otp) {
+                            window.location.href = data.redirect_url || "/";
+                        } else {
+                            if (loginAlertText) loginAlertText.textContent = data.error || "Invalid username or password.";
+                            if (loginAlertBox) loginAlertBox.classList.remove("hidden");
+                        }
+                    })
+                    .catch(() => {
+                        btnSubmitLogin.disabled = false;
+                        loginForm.submit();
+                    });
+                });
+            }
+
+            if (otpVerifyForm) {
+                otpVerifyForm.addEventListener("submit", function(e) {
+                    e.preventDefault();
+                    btnVerifyCode.disabled = true;
+                    btnVerifyCode.textContent = "Verifying...";
+                    if (otpAlertBox) otpAlertBox.classList.add("hidden");
+
+                    const formData = new FormData(otpVerifyForm);
+
+                    fetch("{% url 'login' %}", {
+                        method: "POST",
+                        body: formData,
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        btnVerifyCode.disabled = false;
+                        btnVerifyCode.textContent = "Verify Code & Sign In";
+
+                        if (data.success && data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            if (otpAlertBox) {
+                                otpAlertBox.textContent = data.error || "Invalid 6-digit code. Please try again.";
+                                otpAlertBox.classList.remove("hidden");
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        btnVerifyCode.disabled = false;
+                        btnVerifyCode.textContent = "Verify Code & Sign In";
+                        otpVerifyForm.submit();
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

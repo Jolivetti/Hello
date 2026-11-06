@@ -1,0 +1,231 @@
+{% extends "claims/layout.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block body %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold mb-0 text-dark">Platform Master Administration</h2>
+                <span class="badge bg-danger px-2.5 py-1 text-uppercase letter-spacing" style="font-size: 0.7rem;">
+                    SuperAdmin Root
+                </span>
+            </div>
+            <div class="text-muted small">
+                Enterprise tenant oversight, subscriber law firms, medical network clinics, and compliance audit trail.
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'index' %}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+                Law Firm Workspace &rarr;
+            </a>
+            <a href="/admin/" target="_blank" class="btn btn-dark btn-sm px-3 rounded-pill">
+                Django Backend Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Platform KPI Metric Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3">
+                <span class="text-muted small d-block mb-1">Subscribed Law Firms</span>
+                <h3 class="fw-bold mb-0 text-dark">{{ law_firms|length }}</h3>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3">
+                <span class="text-muted small d-block mb-1">Medical Provider Facilities</span>
+                <h3 class="fw-bold mb-0 text-primary">{{ facilities|length }}</h3>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3">
+                <span class="text-muted small d-block mb-1">Total System Cases</span>
+                <h3 class="fw-bold mb-0 text-success">{{ total_cases_count }}</h3>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3">
+                <span class="text-muted small d-block mb-1">Total Registered Users</span>
+                <h3 class="fw-bold mb-0 text-secondary">{{ total_users_count }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Law Firm Subscriptions Table -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">Subscribed Law Practices</h5>
+                <span class="text-muted small">Independent multi-tenant law firm installations</span>
+            </div>
+            <span class="badge bg-secondary">{{ law_firms|length }} Firms</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Law Firm Name</th>
+                            <th>Tenant Slug</th>
+                            <th>Contact Phone & Email</th>
+                            <th>Active Cases</th>
+                            <th>Staff Seats</th>
+                            <th>Onboarding Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for firm in law_firms %}
+                            <tr>
+                                <td class="ps-3">
+                                    <strong class="text-dark fs-6">{{ firm.name }}</strong>
+                                    {% if firm.address %}<div class="text-muted small">{{ firm.address }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark font-monospace border">
+                                        {{ firm.slug }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">{{ firm.phone|default:"No phone" }}</div>
+                                    <div class="small text-muted">{{ firm.email|default:"No email" }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary font-monospace">
+                                        {{ firm.case_count }} Case{{ firm.case_count|pluralize }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark text-white font-monospace">
+                                        {{ firm.staff_count }} Seat{{ firm.staff_count|pluralize }}
+                                    </span>
+                                </td>
+                                <td class="text-secondary small">{{ firm.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted small fst-italic">No law firm organizations registered yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical Network Facilities Table -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">Medical Provider Network Registry</h5>
+                <span class="text-muted small">Clinics, imaging centers, and hospitals accepting client referrals</span>
+            </div>
+            <span class="badge bg-secondary">{{ facilities|length }} Facilities</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Facility Name</th>
+                            <th>Specialty / Type</th>
+                            <th>Direct Records Contact</th>
+                            <th>Referred Patients</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fac in facilities %}
+                            <tr>
+                                <td class="ps-3">
+                                    <strong class="text-dark fs-6">{{ fac.name }}</strong>
+                                    {% if fac.address %}<div class="text-muted small">{{ fac.address }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info bg-opacity-10 text-dark border border-info small">
+                                        {{ fac.get_facility_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">Ph: {{ fac.phone|default:"N/A" }} &bull; Fax: {{ fac.fax|default:"N/A" }}</div>
+                                    <div class="small text-muted">{{ fac.records_email|default:fac.email|default:"No email listed" }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success font-monospace">
+                                        {{ fac.patient_count }} Patient{{ fac.patient_count|pluralize }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if fac.is_active %}
+                                        <span class="badge bg-success text-white">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-white">Disabled</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted small fst-italic">No medical facilities registered in network yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Master Regulatory Audit Trail -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-0 text-danger">Permanent Case Deletion Audit Ledger</h5>
+                <span class="text-muted small">Regulatory compliance log for destroyed case files</span>
+            </div>
+            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Audit Trail</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Case #</th>
+                            <th>Client Name</th>
+                            <th>Deleted By</th>
+                            <th>Mandatory Business Reason</th>
+                            <th class="text-end pe-3">Destroyed At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_audit_logs %}
+                            <tr>
+                                <td class="ps-3 font-monospace fw-bold text-dark">#{{ log.case_number }}</td>
+                                <td class="fw-semibold text-dark">{{ log.client_name }}</td>
+                                <td>
+                                    {% if log.deleted_by %}
+                                        {{ log.deleted_by.get_full_name|default:log.deleted_by.username }}
+                                    {% else %}
+                                        <span class="text-muted">System / Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="text-secondary" style="white-space: pre-wrap;">{{ log.reason }}</span>
+                                </td>
+                                <td class="text-end pe-3 text-muted font-monospace small">
+                                    {{ log.deleted_at|date:"M d, Y - H:i" }}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted small fst-italic">No case files have been destroyed. Ledger is clean.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

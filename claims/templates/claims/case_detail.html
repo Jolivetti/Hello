@@ -1,0 +1,1051 @@
+{% extends "claims/layout.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block body %}
+<style>
+    /* Global Whole-Input Calendar Interaction Rule */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        background: transparent;
+        bottom: 0;
+        color: transparent;
+        cursor: pointer;
+        height: auto;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: auto;
+    }
+    .date-input-wrapper {
+        position: relative;
+    }
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Flashing Glowing Halo Animation */
+    @keyframes targetHaloPulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.75);
+            border-color: #DC2626 !important;
+            transform: scale(1);
+        }
+        30% {
+            box-shadow: 0 0 0 10px rgba(220, 38, 38, 0.4), 0 0 28px 8px rgba(239, 68, 68, 0.55);
+            border-color: #DC2626 !important;
+            transform: scale(1.01);
+        }
+        70% {
+            box-shadow: 0 0 0 15px rgba(220, 38, 38, 0.15), 0 0 38px 10px rgba(239, 68, 68, 0.35);
+            border-color: #DC2626 !important;
+            transform: scale(1.005);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+            border-color: var(--firm-border) !important;
+            transform: scale(1);
+        }
+    }
+
+    .highlight-halo {
+        animation: targetHaloPulse 0.9s ease-in-out 3 !important;
+        border: 2px solid #DC2626 !important;
+        scroll-margin-top: 90px;
+    }
+</style>
+
+<div class="container-fluid px-0">
+    <!-- Actionable Validation & Notification Banner (With Direct Jump Links) -->
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger border-danger{% elif message.tags == 'success' %}alert-success border-success{% elif message.tags == 'warning' %}alert-warning border-warning{% else %}alert-info border-info{% endif %} alert-dismissible fade show shadow-sm py-2 px-3 small d-flex justify-content-between align-items-center" role="alert">
+                    <div>
+                        <strong>{% if message.tags == 'error' %}⚠️ Alert:{% elif message.tags == 'warning' %}⚠️ Warning:{% else %}✓ Notice:{% endif %}</strong> 
+                        {{ message|safe }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Top Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1">Case #{{ case.case_number }}</h2>
+            <div class="text-muted small">
+                Client: <strong class="text-dark">{{ case.client.first_name }} {{ case.client.last_name }}</strong> &bull; 
+                Attorney: 
+                {% if case.assigned_attorney %}
+                    <strong class="text-dark">{{ case.assigned_attorney.get_full_name|default:case.assigned_attorney.username }}</strong>
+                {% else %}
+                    <a href="#legal-team-section" class="badge bg-danger bg-opacity-10 text-danger border border-danger text-decoration-none fw-bold" onclick="focusAndHighlight('legal-team-section', 'assigned_attorney', false)">Unassigned (Required to Advance)</a>
+                {% endif %} &bull; 
+                Case Manager: 
+                {% if case.assigned_case_manager %}
+                    <strong class="text-dark">{{ case.assigned_case_manager.get_full_name|default:case.assigned_case_manager.username }}</strong>
+                {% else %}
+                    <a href="#legal-team-section" class="badge bg-danger bg-opacity-10 text-danger border border-danger text-decoration-none fw-bold" onclick="focusAndHighlight('legal-team-section', 'assigned_case_manager', false)">Unassigned (Required to Advance)</a>
+                {% endif %} &bull; 
+                Opened: {{ case.created_at|date:"M d, Y" }}
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2 mt-md-0" id="stage-select-box">
+            <span class="small fw-semibold text-secondary">Stage:</span>
+            <form action="{% url 'api_update_status' case.id %}" method="POST" class="d-inline">
+                {% csrf_token %}
+                <select name="status" id="case-status-select" onchange="this.form.submit()" class="form-select fw-bold border-primary text-primary" style="width: auto;">
+                    {% for code, name in status_choices %}
+                        <option value="{{ code }}" {% if case.status == code %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Case Information, Passengers & Notes -->
+        <div class="col-lg-7">
+            <!-- Case Information Card -->
+            <div class="card shadow-sm border-0 mb-4" id="case-info-section">
+                <form action="{% url 'update_case_assignment' case.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark">Case Information</h5>
+                        <div>
+                            <button type="button" id="btn-enable-edit" class="btn btn-sm btn-outline-primary" onclick="toggleCaseEdit(true)">
+                                Edit
+                            </button>
+                            <div id="edit-actions-group" class="d-none gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleCaseEdit(false)">Cancel</button>
+                                <button type="submit" class="btn btn-sm btn-primary">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Client Full Name -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Client Full Name:</span>
+                                <div class="view-mode fw-semibold text-dark">{{ case.client.first_name }} {{ case.client.last_name }}</div>
+                                <div class="edit-mode d-none">
+                                    <div class="row g-1">
+                                        <div class="col-6">
+                                            <input type="text" name="client_first_name" class="form-control form-control-sm" value="{{ case.client.first_name }}" placeholder="First Name" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="text" name="client_last_name" class="form-control form-control-sm" value="{{ case.client.last_name }}" placeholder="Last Name" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Client Date of Birth -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Client Date of Birth (DOB):</span>
+                                <div class="view-mode fw-semibold text-dark">
+                                    {% if case.client.date_of_birth %}
+                                        {{ case.client.date_of_birth|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">DOB Required to Advance</span>
+                                    {% endif %}
+                                </div>
+                                <div class="edit-mode d-none">
+                                    <input type="text" name="client_dob" id="input_client_dob" class="form-control form-control-sm" 
+                                           value="{{ case.client.date_of_birth|date:'m/d/Y'|default:'' }}" 
+                                           placeholder="MM/DD/YYYY (e.g. 1/1/80)" 
+                                           onblur="autoFormatDobField(this)" 
+                                           autocomplete="off">
+                                    <div class="form-text small" style="font-size: 0.72rem;">Type freely (e.g. 1/1/80 auto-formats to 01/01/1980).</div>
+                                </div>
+                            </div>
+
+                            <!-- Client Contact (Phone & Email) -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Client Contact:</span>
+                                <div class="view-mode fw-semibold text-dark">
+                                    {{ case.client.phone|default:"No phone" }} | <span class="fw-normal text-secondary">{{ case.client.email }}</span>
+                                </div>
+                                <div class="edit-mode d-none">
+                                    <div class="row g-1">
+                                        <div class="col-6">
+                                            <input type="text" name="client_phone" class="form-control form-control-sm" value="{{ case.client.phone|default:'' }}" placeholder="Phone">
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="email" name="client_email" class="form-control form-control-sm" value="{{ case.client.email|default:'' }}" placeholder="Email" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Client DL # -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Client DL #:</span>
+                                <div class="view-mode fw-semibold text-dark">{{ case.client.drivers_license|default:"Not recorded" }}</div>
+                                <div class="edit-mode d-none">
+                                    <input type="text" name="client_dl" class="form-control form-control-sm" value="{{ case.client.drivers_license|default:'' }}" placeholder="Client DL #">
+                                </div>
+                            </div>
+
+                            <!-- Police Report # -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Police Report #:</span>
+                                <div class="view-mode fw-semibold text-dark">{{ case.police_report_number|default:"None" }}</div>
+                                <div class="edit-mode d-none">
+                                    <input type="text" name="police_report_number" class="form-control form-control-sm" value="{{ case.police_report_number|default:'' }}" placeholder="Police Report #">
+                                </div>
+                            </div>
+
+                            <!-- Date of Incident -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Date of Incident:</span>
+                                <div class="view-mode fw-semibold text-dark">{{ case.incident_date|date:"M d, Y"|default:"Unspecified" }}</div>
+                                <div class="edit-mode d-none">
+                                    <input type="text" name="incident_date" id="input_incident_date" class="form-control form-control-sm" 
+                                           value="{{ case.incident_date|date:'m/d/Y'|default:'' }}" 
+                                           placeholder="MM/DD/YYYY" 
+                                           onblur="autoFormatDobField(this)">
+                                </div>
+                            </div>
+                            
+                            <!-- Initial ER & EMS -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Initial ER / Hospital:</span>
+                                <div class="view-mode fw-semibold text-dark">{{ case.er_facility|default:case.initial_hospital|default:"None" }}</div>
+                                <div class="edit-mode d-none">
+                                    <input type="text" name="initial_hospital" class="form-control form-control-sm" value="{{ case.er_facility|default:case.initial_hospital|default:'' }}" placeholder="e.g. Grady Memorial">
+                                </div>
+                            </div>
+
+                            <!-- Ambulance / EMS Provider -->
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block">Ambulance / EMS:</span>
+                                <div class="view-mode fw-semibold text-dark">
+                                    {% if case.ambulance_provider %}
+                                        {{ case.ambulance_provider }} <span class="badge bg-success bg-opacity-10 text-success small">EMS Dispatched</span>
+                                    {% elif case.ems_dispatched %}
+                                        Dispatched (Provider Unspecified)
+                                    {% else %}
+                                        No EMS
+                                    {% endif %}
+                                </div>
+                                <div class="edit-mode d-none">
+                                    <div class="input-group input-group-sm mb-1">
+                                        <div class="input-group-text">
+                                            <input type="checkbox" name="ems_dispatched" class="form-check-input mt-0" id="emsCheck" {% if case.ems_dispatched or case.ambulance_provider %}checked{% endif %}>
+                                        </div>
+                                        <input type="text" name="ambulance_provider" class="form-control" value="{{ case.ambulance_provider|default:'' }}" placeholder="Ambulance Provider (e.g. Grady EMS)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Accident Location -->
+                            <div class="col-12 border-top pt-2 mt-3">
+                                <span class="text-muted small d-block">Accident Location:</span>
+                                <div class="view-mode fw-semibold text-dark">{{ case.accident_location|default:"Unspecified" }}</div>
+                                <div class="edit-mode d-none">
+                                    <input type="text" name="accident_location" class="form-control form-control-sm" value="{{ case.accident_location|default:'' }}" placeholder="Accident Location">
+                                </div>
+                            </div>
+
+                            <!-- Accident Description -->
+                            <div class="col-12">
+                                <span class="text-muted small d-block">Accident Description:</span>
+                                <div class="view-mode text-dark">{{ case.accident_description|default:"No description provided." }}</div>
+                                <div class="edit-mode d-none">
+                                    <textarea name="accident_description" rows="2" class="form-control form-control-sm" placeholder="Accident Description">{{ case.accident_description|default:'' }}</textarea>
+                                </div>
+                            </div>
+
+                            <!-- Insurance Details Block -->
+                            <div class="col-12 border-top pt-3">
+                                <div class="row g-2">
+                                    <div class="col-sm-4">
+                                        <span class="text-muted small d-block">AFD Insurance:</span>
+                                        <div class="view-mode fw-bold text-dark">{{ case.insurance_carrier|default:"Unassigned" }}</div>
+                                        <div class="edit-mode d-none">
+                                            <input type="text" name="insurance_carrier" class="form-control form-control-sm" value="{{ case.insurance_carrier|default:'' }}" placeholder="Insurance Carrier">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="text-muted small d-block">Policy #:</span>
+                                        <div class="view-mode fw-bold text-dark">{{ case.policy_number|default:"None" }}</div>
+                                        <div class="edit-mode d-none">
+                                            <input type="text" name="policy_number" class="form-control form-control-sm" value="{{ case.policy_number|default:'' }}" placeholder="Policy #">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="text-muted small d-block">Insurance Claim #:</span>
+                                        <div class="view-mode fw-bold text-dark">{{ case.claim_number|default:"None" }}</div>
+                                        <div class="edit-mode d-none">
+                                            <input type="text" name="claim_number" class="form-control form-control-sm" value="{{ case.claim_number|default:'' }}" placeholder="Claim #">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mt-2">
+                                        <span class="text-muted small d-block">AFD DL #:</span>
+                                        <div class="view-mode fw-bold text-dark">{{ case.at_fault_drivers_license|default:"None" }}</div>
+                                        <div class="edit-mode d-none">
+                                            <input type="text" name="at_fault_drivers_license" class="form-control form-control-sm" value="{{ case.at_fault_drivers_license|default:'' }}" placeholder="AFD DL #">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mt-2">
+                                        <span class="text-muted small d-block">Estimated Policy Limits:</span>
+                                        <div class="view-mode font-monospace fw-bold fs-6 text-primary">
+                                            {% if case.policy_limits %}
+                                                ${{ case.policy_limits|floatformat:2|intcomma }}
+                                            {% else %}
+                                                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning font-monospace fs-7">Limits Required to Advance past Treatment</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="edit-mode d-none">
+                                            <input type="number" step="0.01" id="input_policy_limits" name="policy_limits" class="form-control form-control-sm font-monospace" value="{{ case.policy_limits|default:'' }}" placeholder="e.g. 25000.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Passengers & Dependents Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Passengers & Dependents</h5>
+                        <span class="text-muted small">Minors (< 18) remain under parent file; Adults (18+) automatically spawn independent case.</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addPassengerModal">
+                        + Add Passenger
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Name & Contact</th>
+                                    <th>Status / Category</th>
+                                    <th>Linked Case File</th>
+                                    <th class="text-end pe-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for passenger in passengers %}
+                                    <tr>
+                                        <td class="ps-3">
+                                            <strong class="text-dark">{{ passenger.name }}</strong>
+                                            {% if passenger.date_of_birth %}<div class="text-muted small">DOB: {{ passenger.date_of_birth|date:"M d, Y" }}</div>{% endif %}
+                                            {% if passenger.phone %}<div class="text-muted small">{{ passenger.phone }}</div>{% endif %}
+                                            {% if passenger.email %}<div class="text-muted small">{{ passenger.email }}</div>{% endif %}
+                                        </td>
+                                        <td>
+                                            {% if passenger.is_minor %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success">Minor (Under Parent)</span>
+                                            {% else %}
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">Adult (Independent Claim)</span>
+                                            {% endif %}
+                                            {% if passenger.is_injured %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Injured</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if passenger.linked_case %}
+                                                <a href="{% url 'case_detail' passenger.linked_case.id %}" class="fw-bold text-decoration-none">
+                                                    #{{ passenger.linked_case.case_number }} &rarr;
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted small">Attached to Primary File</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <form action="{% url 'delete_passenger' case.id passenger.id %}" method="POST" onsubmit="return confirm('WARNING: Removing passenger {{ passenger.name }} will also remove any independent spawned case file created for them. Proceed?');" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 small">Remove</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-3 text-muted small fst-italic">No passengers registered for this vehicle file.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Notes Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0 text-dark">Case Notes</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'api_add_note' case.id %}" method="POST" class="mb-3">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="text" name="content" class="form-control" placeholder="Add a case note or action item..." required>
+                            <button class="btn btn-primary" type="submit">Post Note</button>
+                        </div>
+                    </form>
+
+                    <div style="max-height: 280px; overflow-y: auto;">
+                        {% for note in notes %}
+                            <div class="card bg-light border-0 mb-2 p-3">
+                                <div class="d-flex justify-content-between text-muted small mb-1">
+                                    <strong class="text-dark">{{ note.author.get_full_name|default:note.author.username }}</strong>
+                                    <span>{{ note.created_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <p class="mb-0 text-secondary" style="white-space: pre-wrap;">{{ note.content }}</p>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted small fst-italic py-2">No notes recorded yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents & Evidence -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark">Case Documents & Evidence</h5>
+                    <span class="badge bg-secondary">{{ documents|length }} files</span>
+                </div>
+                
+                <div class="bg-light p-3 border-bottom">
+                    <form action="{% url 'case_detail' case.id %}" method="POST" enctype="multipart/form-data" class="row g-2 align-items-center">
+                        {% csrf_token %}
+                        <div class="col-sm-4">
+                            <input type="text" name="title" class="form-control form-control-sm" placeholder="Document Title (Optional)">
+                        </div>
+                        <div class="col-sm-4">
+                            <select name="document_type" class="form-select form-select-sm">
+                                <option value="POLICE_REPORT">Police Accident Report</option>
+                                <option value="MEDICAL_RECORD">Medical Record</option>
+                                <option value="INSURANCE_LETTER">Insurance Letter</option>
+                                <option value="CRASH_PHOTO">Accident Scene Photo</option>
+                                <option value="OTHER" selected>Other Evidence</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <input type="file" name="document_file" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-sm-1 text-end">
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="card-body">
+                    {% if documents %}
+                        <ul class="list-group list-group-flush small">
+                            {% for doc in documents %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                <div>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border me-1">{{ doc.get_document_type_display }}</span>
+                                    <strong class="text-dark">{{ doc.title|default:doc.file.name }}</strong>
+                                    <span class="text-muted d-block fs-8">Uploaded by {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }} &bull; {{ doc.uploaded_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ doc.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2">View</a>
+                                    <form action="{% url 'delete_document' case.id doc.id %}" method="POST" onsubmit="return confirm('Delete this document?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">Delete</button>
+                                    </form>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0 fst-italic">No accident photos or client records uploaded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Danger Zone / Administrative Cleanup Card -->
+            <div class="card border-danger border-opacity-25 shadow-sm mb-4">
+                <div class="card-header bg-danger bg-opacity-10 py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-danger">Administrative Controls & Case Archive</h6>
+                        <span class="text-muted small">Permanent removal requires audit reason logging.</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCaseAuditModal">
+                        Delete Case File...
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Medical Bills, Settlement & Legal Team -->
+        <div class="col-lg-5">
+            <!-- Medical Providers & Bills Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark">Medical Providers & Bills</h5>
+                    <span id="total-medical-badge" class="badge bg-primary fs-6 font-monospace">${{ total_medical|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'api_add_bill' case.id %}" method="POST" enctype="multipart/form-data" class="row g-2 mb-3">
+                        {% csrf_token %}
+                        <div class="col-4">
+                            <input type="text" name="provider" class="form-control form-control-sm" placeholder="Provider Name" required>
+                        </div>
+                        <div class="col-3">
+                            <input type="number" step="0.01" name="amount" class="form-control form-control-sm font-monospace" placeholder="Billed ($)">
+                        </div>
+                        <div class="col-3">
+                            <input type="file" name="bill_document" class="form-control form-control-sm" title="Upload Bill Document">
+                        </div>
+                        <div class="col-2">
+                            <button type="submit" class="btn btn-sm btn-primary w-100 fw-semibold">Add</button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bill in bills %}
+                                    <tr>
+                                        <td class="fw-semibold text-dark">
+                                            {{ bill.provider }}
+                                            {% if bill.bill_document %}
+                                                <br><a href="{{ bill.bill_document.url }}" target="_blank" class="small text-decoration-none border rounded px-1 bg-light">📄 View Bill</a>
+                                            {% endif %}
+                                        </td>
+                                        <td class="font-monospace">
+                                            {% if bill.reduced_amount %}
+                                                <span class="text-muted text-decoration-line-through small">${{ bill.amount|floatformat:2|intcomma }}</span><br>
+                                                <span class="text-success fw-bold">${{ bill.reduced_amount|floatformat:2|intcomma }}</span>
+                                            {% else %}
+                                                ${{ bill.amount|floatformat:2|intcomma }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if bill.received %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success">Received</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 small" data-bs-toggle="modal" data-bs-target="#editBillModal{{ bill.id }}">
+                                                Edit
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Edit Bill Modal -->
+                                    <div class="modal fade" id="editBillModal{{ bill.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <form action="{% url 'edit_bill' case.id bill.id %}" method="POST" enctype="multipart/form-data">
+                                                    {% csrf_token %}
+                                                    <div class="modal-header">
+                                                        <h6 class="modal-title fw-bold">Edit Medical Provider & Bill</h6>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold">Provider Name</label>
+                                                            <input type="text" name="provider" class="form-control form-control-sm" value="{{ bill.provider }}" required>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold">Original Billed Amount ($)</label>
+                                                            <input type="number" step="0.01" name="amount" class="form-control form-control-sm font-monospace" value="{{ bill.amount }}">
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold text-success">Negotiated Lien Amount ($)</label>
+                                                            <input type="number" step="0.01" name="reduced_amount" class="form-control form-control-sm font-monospace border-success" value="{{ bill.reduced_amount|default:'' }}" placeholder="Leave blank if not negotiated yet">
+                                                            <div class="form-text small">Entering a reduced amount will recalculate the settlement client payout.</div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold">Attach Bill / Lien Document</label>
+                                                            <input type="file" name="bill_document" class="form-control form-control-sm">
+                                                            {% if bill.bill_document %}
+                                                                <div class="form-text small mt-1">Current file: <a href="{{ bill.bill_document.url }}" target="_blank">View</a></div>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input type="checkbox" name="received" class="form-check-input" id="receivedCheck{{ bill.id }}" {% if bill.received %}checked{% endif %}>
+                                                            <label class="form-check-label small fw-semibold" for="receivedCheck{{ bill.id }}">
+                                                                Records & Final Lien Received
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer d-flex justify-content-between">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('delete-bill-form-{{ bill.id }}').submit();">
+                                                            Delete Provider
+                                                        </button>
+                                                        <div class="d-flex gap-2">
+                                                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-sm btn-primary">Save Changes</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+
+                                                <form id="delete-bill-form-{{ bill.id }}" action="{% url 'delete_bill' case.id bill.id %}" method="POST" style="display: none;">
+                                                    {% csrf_token %}
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-muted text-center py-2 small fst-italic">No medical providers assigned yet.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settlement Statement Calculator Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark">Settlement Statement</h5>
+                    {% if case.policy_limits %}
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 small" style="font-size: 0.78rem;" onclick="applyPolicyLimits('{{ case.policy_limits }}')">
+                            Use Policy Limits (${{ case.policy_limits|floatformat:0|intcomma }})
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'api_save_settlement' case.id %}" method="POST" id="settlement-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-muted mb-0">Gross Settlement ($)</label>
+                                <span class="text-muted small">
+                                    Policy Limit: 
+                                    <strong>
+                                        {% if case.policy_limits %}
+                                            ${{ case.policy_limits|floatformat:2|intcomma }}
+                                        {% else %}
+                                            <span class="text-warning">Pending (Required)</span>
+                                        {% endif %}
+                                    </strong>
+                                </span>
+                            </div>
+                            <input type="number" step="0.01" id="id_gross_settlement" name="gross_settlement" class="form-control form-control-sm font-monospace fs-6" value="{{ settlement.gross_settlement|default:'' }}" placeholder="e.g. {{ case.policy_limits|default:'25000.00' }}" oninput="recalcSettlement()">
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Attorney Fee (%)</label>
+                                <input type="number" step="0.01" id="id_attorney_fee_pct" name="attorney_fee_percent" class="form-control form-control-sm font-monospace" value="{{ settlement.attorney_fee_percent|default:'33.33' }}" oninput="recalcSettlement()">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Litigation Costs ($)</label>
+                                <input type="number" step="0.01" id="id_litigation_costs" name="litigation_costs" class="form-control form-control-sm font-monospace" value="{{ settlement.litigation_costs|default:'0.00' }}" oninput="recalcSettlement()">
+                            </div>
+                        </div>
+
+                        <div class="bg-light p-3 rounded mb-3 border">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Gross Recovery:</span>
+                                <span class="font-monospace fw-semibold" id="disp-gross">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-danger mb-1">
+                                <span>- Attorney Fee (<span id="disp-pct">33.33</span>%):</span>
+                                <span class="font-monospace fw-semibold" id="disp-fee">-$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-danger mb-1">
+                                <span>- Litigation Costs:</span>
+                                <span class="font-monospace fw-semibold" id="disp-costs">-$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-danger mb-1">
+                                <span>- Total Medical Liens:</span>
+                                <span class="font-monospace fw-semibold" id="disp-med">-${{ total_medical|floatformat:2|intcomma }}</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between fw-bold text-dark fs-6">
+                                <span>Client Net Payout:</span>
+                                <span class="font-monospace text-success fw-bold" id="disp-net">${{ settlement.final_client_net|floatformat:2|intcomma }}</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-primary w-100 fw-semibold">Save Settlement Calculations</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Legal Team Assignment Card -->
+            <div class="card shadow-sm border-0" id="legal-team-section">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0 text-dark">Legal Team</h5>
+                </div>
+                <div class="card-body">
+                    {% if not case.assigned_attorney or not case.assigned_case_manager %}
+                        <div class="alert alert-warning py-2 px-3 small mb-3 border border-warning">
+                            <strong>⚠️ Action Required:</strong> Both Lead Attorney and Case Manager must be assigned before advancing this file past Intake.
+                        </div>
+                    {% endif %}
+                    <form action="{% url 'update_case_assignment' case.id %}" method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Primary Attorney *</label>
+                            <select name="assigned_attorney" id="assigned_attorney_select" class="form-select form-select-sm">
+                                <option value="">-- Unassigned --</option>
+                                {% for atty in attorneys %}
+                                    <option value="{{ atty.id }}" {% if case.assigned_attorney and case.assigned_attorney.id == atty.id %}selected{% endif %}>
+                                        {{ atty.get_full_name|default:atty.username }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Case Manager *</label>
+                            <select name="assigned_case_manager" id="assigned_case_manager_select" class="form-select form-select-sm">
+                                <option value="">-- Unassigned --</option>
+                                {% for cm in case_managers %}
+                                    <option value="{{ cm.id }}" {% if case.assigned_case_manager and case.assigned_case_manager.id == cm.id %}selected{% endif %}>
+                                        {{ cm.get_full_name|default:cm.username }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Update Legal Team</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Add Passenger -->
+<div class="modal fade" id="addPassengerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{% url 'api_add_passenger' case.id %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold">Add Passenger to Case #{{ case.case_number }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Passenger Full Name *</label>
+                        <input type="text" name="name" class="form-control form-control-sm" required placeholder="Passenger Full Name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date of Birth (DOB) *</label>
+                        <input type="text" name="date_of_birth" id="modal_passenger_dob" class="form-control form-control-sm" 
+                               placeholder="MM/DD/YYYY (e.g. 6/19/84)" 
+                               onblur="autoFormatDobField(this); previewPassengerAge(this);" 
+                               oninput="previewPassengerAge(this);" 
+                               required autocomplete="off">
+                        <div class="form-text small" style="font-size: 0.72rem;">Type freely (e.g. 6/19/84 or 1/1/2015 auto-expands).</div>
+                        <div id="modal_age_preview" class="mt-1 small"></div>
+                    </div>
+
+                    <!-- Minor Dependent Notice (Dynamically toggled) -->
+                    <div id="minor_dependent_notice" class="alert alert-success bg-opacity-10 border border-success py-2 px-3 small text-success mb-3 d-none">
+                        <strong>✓ Minor Dependent:</strong> Managed under primary client file. Phone and email are not required.
+                    </div>
+
+                    <!-- Adult Contact Fields (Hidden for minors, required for 18+) -->
+                    <div id="adult_contact_fields">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Phone Number</label>
+                            <input type="text" name="phone" id="modal_passenger_phone" class="form-control form-control-sm" placeholder="(404) 555-0100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Email Address <span class="text-danger" id="email_required_asterisk">*</span> <span class="text-muted fw-normal">(Required for 18+ to establish independent portal)</span></label>
+                            <input type="email" name="email" id="modal_passenger_email" class="form-control form-control-sm" placeholder="passenger@example.com">
+                        </div>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="is_injured" value="true" class="form-check-input" id="modalPassengerInjured" checked>
+                        <label class="form-check-label small fw-semibold" for="modalPassengerInjured">
+                            Injured & Requires Medical Management
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Add Passenger</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Permanent Case Deletion with Audit Log Requirement -->
+<div class="modal fade" id="deleteCaseAuditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <form action="{% url 'delete_case' case.id %}" method="POST" id="deleteAuditForm">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h6 class="modal-title fw-bold">⚠️ Permanent Case File Deletion Audit</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger py-2 small mb-3">
+                        <strong>Warning:</strong> You are about to permanently destroy <strong>Case #{{ case.case_number }}</strong> ({{ case.client.first_name }} {{ case.client.last_name }}) and all related bills, notes, and records. This action cannot be undone.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Category / Reason *</label>
+                        <select class="form-select form-select-sm mb-2" id="deleteReasonCategory" onchange="syncReasonCategory(this)">
+                            <option value="" disabled selected>-- Select Official Reason --</option>
+                            <option value="Duplicate case record created in error">Duplicate case file / Duplicate intake</option>
+                            <option value="Client withdrew representation / Representation declined">Representation declined / Client withdrew</option>
+                            <option value="System test file or erroneous placeholder">System test / Administrative test file</option>
+                            <option value="Other">Other (Provide custom explanation below)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-dark">Detailed Audit Reason * (Logged into Permanent Ledger)</label>
+                        <textarea name="deletion_reason" id="deletionReasonText" class="form-control form-control-sm" rows="3" placeholder="Explain exactly why this file is being permanently destroyed..." required oninput="validateDeleteBtn()"></textarea>
+                        <div class="form-text small" style="font-size: 0.72rem;">This entry will be recorded in the firm's permanent regulatory audit ledger along with your credentials.</div>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="btnConfirmDeleteCase" class="btn btn-sm btn-danger fw-bold" disabled>
+                        Confirm Permanent Deletion
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const totalMedicalLiens = parseFloat("{{ total_medical|default:'0' }}");
+
+    function applyPolicyLimits(limits) {
+        const input = document.getElementById('id_gross_settlement');
+        if (input) {
+            input.value = parseFloat(limits).toFixed(2);
+            recalcSettlement();
+        }
+    }
+
+    function recalcSettlement() {
+        const grossInput = document.getElementById('id_gross_settlement');
+        const pctInput = document.getElementById('id_attorney_fee_pct');
+        const costsInput = document.getElementById('id_litigation_costs');
+
+        const gross = parseFloat(grossInput ? grossInput.value : 0) || 0;
+        const pct = parseFloat(pctInput ? pctInput.value : 33.33) || 0;
+        const costs = parseFloat(costsInput ? costsInput.value : 0) || 0;
+
+        const fee = gross * (pct / 100.0);
+        const net = gross - fee - costs - totalMedicalLiens;
+
+        const dispPct = document.getElementById('disp-pct');
+        const dispGross = document.getElementById('disp-gross');
+        const dispFee = document.getElementById('disp-fee');
+        const dispCosts = document.getElementById('disp-costs');
+        const dispNet = document.getElementById('disp-net');
+
+        if (dispPct) dispPct.textContent = pct.toFixed(2);
+        if (dispGross) dispGross.textContent = '$' + gross.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (dispFee) dispFee.textContent = '-$' + fee.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (dispCosts) dispCosts.textContent = '-$' + costs.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (dispNet) dispNet.textContent = '$' + net.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        recalcSettlement();
+
+        if (window.location.hash) {
+            const hId = window.location.hash.substring(1);
+            if (hId === 'legal-team-section' || hId === 'case-info-section') {
+                focusAndHighlight(hId, null, hId === 'case-info-section');
+            }
+        }
+    });
+
+    function toggleCaseEdit(showEdit) {
+        const viewElements = document.querySelectorAll('.view-mode');
+        const editElements = document.querySelectorAll('.edit-mode');
+        const btnEdit = document.getElementById('btn-enable-edit');
+        const actionGroup = document.getElementById('edit-actions-group');
+
+        if (showEdit) {
+            viewElements.forEach(el => el.classList.add('d-none'));
+            editElements.forEach(el => el.classList.remove('d-none'));
+            if (btnEdit) btnEdit.classList.add('d-none');
+            if (actionGroup) {
+                actionGroup.classList.remove('d-none');
+                actionGroup.classList.add('d-flex');
+            }
+        } else {
+            viewElements.forEach(el => el.classList.remove('d-none'));
+            editElements.forEach(el => el.classList.add('d-none'));
+            if (btnEdit) btnEdit.classList.remove('d-none');
+            if (actionGroup) {
+                actionGroup.classList.remove('d-flex');
+                actionGroup.classList.add('d-none');
+            }
+        }
+    }
+
+    function focusAndHighlight(targetId, inputToFocus, enableEdit) {
+        if (enableEdit) {
+            toggleCaseEdit(true);
+        }
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.classList.remove('highlight-halo');
+            void targetEl.offsetWidth;
+            targetEl.classList.add('highlight-halo');
+            setTimeout(() => {
+                targetEl.classList.remove('highlight-halo');
+            }, 3000);
+        }
+
+        if (inputToFocus) {
+            setTimeout(() => {
+                const inputEl = document.getElementById(inputToFocus) || document.querySelector(`[name="${inputToFocus}"]`);
+                if (inputEl) {
+                    inputEl.focus();
+                    if (inputEl.select) inputEl.select();
+                }
+            }, 500);
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href^="#"]');
+        if (link) {
+            const targetId = link.getAttribute('href').substring(1);
+            if (targetId === 'legal-team-section' || targetId === 'case-info-section') {
+                e.preventDefault();
+                const isDob = link.textContent.toLowerCase().includes('dob');
+                const isLimits = link.textContent.toLowerCase().includes('limit');
+                const isLegal = targetId === 'legal-team-section';
+
+                let inputName = '';
+                let enableEdit = false;
+                if (isDob) { inputName = 'client_dob'; enableEdit = true; }
+                else if (isLimits) { inputName = 'policy_limits'; enableEdit = true; }
+                else if (isLegal) { inputName = 'assigned_attorney'; }
+
+                focusAndHighlight(targetId, inputName, enableEdit);
+                history.pushState(null, null, '#' + targetId);
+            }
+        }
+    });
+
+    function autoFormatDobField(input) {
+        let val = input.value.trim();
+        if (!val) return;
+
+        let m = null, d = null, y = null;
+
+        if (val.includes('/') || val.includes('-') || val.includes('.')) {
+            const parts = val.split(/[/\-.]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    y = parseInt(parts[0], 10);
+                    m = parseInt(parts[1], 10);
+                    d = parseInt(parts[2], 10);
+                } else {
+                    m = parseInt(parts[0], 10);
+                    d = parseInt(parts[1], 10);
+                    y = parseInt(parts[2], 10);
+                }
+            }
+        } else if (/^\d{6}$/.test(val)) {             m = parseInt(val.substring(0, 2), 10);             d = parseInt(val.substring(2, 4), 10);             y = parseInt(val.substring(4, 6), 10);         } else if (/^\d{8}$/.test(val)) {
+            m = parseInt(val.substring(0, 2), 10);
+            d = parseInt(val.substring(2, 4), 10);
+            y = parseInt(val.substring(4, 8), 10);
+        }
+
+        if (m && d && y) {
+            if (y < 100) {
+                y = (y > 26) ? (1900 + y) : (2000 + y);
+            }
+            if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2099) {
+                const mm = String(m).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                input.value = `${mm}/${dd}/${y}`;
+            }
+        }
+    }
+
+    function previewPassengerAge(input) {
+        const preview = document.getElementById('modal_age_preview');
+        const minorNotice = document.getElementById('minor_dependent_notice');
+        const adultFields = document.getElementById('adult_contact_fields');
+        const emailInput = document.getElementById('modal_passenger_email');
+
+        if (!input.value) {
+            preview.innerHTML = '';
+            if (minorNotice) minorNotice.classList.add('d-none');
+            if (adultFields) adultFields.classList.remove('d-none');
+            if (emailInput) emailInput.required = false;
+            return;
+        }
+
+        autoFormatDobField(input);
+        const parts = input.value.split('/');
+        if (parts.length !== 3) return;
+
+        const dob = new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10));
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        if (age < 18) {
+            preview.innerHTML = `<span class="badge bg-success bg-opacity-10 text-success fw-semibold">Minor (${age} yrs) &bull; Remains under parent file</span>`;
+            // Hide phone and email for minors
+            if (minorNotice) minorNotice.classList.remove('d-none');
+            if (adultFields) adultFields.classList.add('d-none');
+            if (emailInput) {
+                emailInput.required = false;
+                emailInput.value = '';
+            }
+            const phoneInput = document.getElementById('modal_passenger_phone');
+            if (phoneInput) phoneInput.value = '';
+        } else {
+            preview.innerHTML = `<span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">Adult (${age} yrs) &bull; Auto-spawns independent file (-P1)</span>`;
+            // Show phone and require email for adults
+            if (minorNotice) minorNotice.classList.add('d-none');
+            if (adultFields) adultFields.classList.remove('d-none');
+            if (emailInput) emailInput.required = true;
+        }
+    }
+
+    // Modal Audit Validation Helpers
+    function syncReasonCategory(selectEl) {
+        const txt = document.getElementById('deletionReasonText');
+        if (selectEl.value && selectEl.value !== 'Other') {
+            txt.value = selectEl.value;
+        } else if (selectEl.value === 'Other') {
+            txt.value = '';
+            txt.focus();
+        }
+        validateDeleteBtn();
+    }
+
+    function validateDeleteBtn() {
+        const txt = document.getElementById('deletionReasonText');
+        const btn = document.getElementById('btnConfirmDeleteCase');
+        btn.disabled = !(txt && txt.value.trim().length >= 5);
+    }
+</script>
+{% endblock %}

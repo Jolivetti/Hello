@@ -1,0 +1,314 @@
+{% extends "claims/layout.html" %}
+
+{% block body %}
+<style>
+    .inbox-card {
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        background: #FFFFFF;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Directory items on the left */
+    .case-nav-item {
+        position: relative;
+        padding: 14px 16px;
+        border: none !important;
+        border-bottom: 1px solid #F1F5F9 !important;
+        background: #FFFFFF;
+        transition: all 0.15s ease-in-out;
+        text-decoration: none !important;
+        display: block;
+    }
+    .case-nav-item:hover {
+        background: #F8FAFC;
+    }
+
+    /* Active Selected State */
+    .case-nav-item.is-selected {
+        background: rgba(37, 99, 235, 0.04) !important;
+    }
+    .case-nav-item.is-selected::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        background: #2563EB;
+        border-radius: 0 3px 3px 0;
+    }
+
+    /* Priority Unread Aura (Soft Amber/Coral Gradient & High Contrast Text) */
+    .case-nav-item.has-unread {
+        background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(254, 243, 199, 0.3) 60%, rgba(255, 255, 255, 0) 100%) !important;
+        border-left: 3px solid #D97706 !important;
+    }
+    .case-nav-item.has-unread .case-name {
+        font-weight: 700 !important;
+        color: #0F172A !important;
+    }
+
+    .badge-unread-glow {
+        background: #DC2626;
+        color: #FFFFFF;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 3px 8px;
+        border-radius: 9999px;
+        box-shadow: 0 0 10px rgba(220, 38, 38, 0.45);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Feed Layout */
+    .chat-scroll-canvas {
+        min-height: 420px;
+        max-height: 56vh;
+        overflow-y: auto;
+        padding: 24px;
+        background-color: #F8FAFC;
+    }
+
+    .bubble-row {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 16px;
+    }
+
+    /* Outgoing Bubble (Staff / You) */
+    .bubble-staff {
+        align-self: flex-end;
+        max-width: 78%;
+        background-color: #0F172A;
+        color: #FFFFFF;
+        border-radius: 12px 12px 2px 12px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Incoming Bubble (Client) */
+    .bubble-client {
+        align-self: flex-start;
+        max-width: 78%;
+        background-color: #FFFFFF;
+        color: #0F172A;
+        border: 1px solid #E2E8F0;
+        border-left: 3px solid #2563EB;
+        border-radius: 12px 12px 12px 2px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    .bubble-client.is-unread-fresh {
+        border-color: #F59E0B !important;
+        border-left: 3px solid #D97706 !important;
+        box-shadow: 0 0 14px rgba(245, 158, 11, 0.25) !important;
+        background: #FFFDF7 !important;
+    }
+</style>
+
+<!-- Top Exit & Header Row -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+        {% if is_client %}
+            <a href="{% url 'client_portal' %}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1.5 shadow-sm">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+                Back to Portal
+            </a>
+        {% else %}
+            <a href="{% url 'index' %}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1.5 shadow-sm">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+                Back to Dashboard
+            </a>
+        {% endif %}
+        <div>
+            <h4 class="fw-bold mb-0 text-dark">Message Center</h4>
+            <span class="text-muted small">
+                {% if is_client %}Privileged legal communication channel{% else %}Enterprise multi-party communication hub{% endif %}
+            </span>
+        </div>
+    </div>
+    {% if not is_client %}
+        <span class="badge bg-dark px-3 py-2 text-uppercase letter-spacing" style="font-size: 0.7rem;">
+            Staff: {{ request.user.get_role_display|default:"Case Manager" }}
+        </span>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <!-- LEFT PANEL: Priority Directory (Staff View) -->
+    {% if not is_client %}
+    <div class="col-12 col-md-4 col-lg-3">
+        <div class="inbox-card h-100 overflow-hidden d-flex flex-column">
+            <div class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold small text-uppercase text-secondary letter-spacing">Case Files</span>
+                <span class="badge bg-secondary bg-opacity-25 text-dark">{{ conversation_cases|length }}</span>
+            </div>
+
+            <div class="overflow-auto flex-grow-1" style="max-height: 72vh;">
+                {% for item in conversation_cases %}
+                    <a href="{% url 'inbox' %}?case_id={{ item.id }}" 
+                       class="case-nav-item {% if item.unread_count > 0 %}has-unread{% endif %} {% if selected_case and selected_case.id == item.id %}is-selected{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-semibold text-muted">#{{ item.case_number }}</span>
+                            {% if item.unread_count > 0 %}
+                                <span class="badge-unread-glow">● {{ item.unread_count }} NEW</span>
+                            {% else %}
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">
+                                    {{ item.status }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="case-name text-truncate text-dark small mb-1">
+                            {{ item.client.first_name }} {{ item.client.last_name }}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 0.72rem;">
+                            <span>{{ item.total_messages|default:item.messages.count }} message{{ item.total_messages|default:item.messages.count|pluralize }}</span>
+                            {% if item.unread_count > 0 %}
+                                <span class="text-danger fw-bold">Unread Reply</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% empty %}
+                    <div class="p-4 text-center text-muted small">
+                        No active cases available.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- RIGHT PANEL: Active Thread & Quick Actions -->
+    <div class="col-12 {% if not is_client %}col-md-8 col-lg-9{% else %}col-12{% endif %}">
+        {% if selected_case %}
+            <div class="inbox-card overflow-hidden">
+                
+                <!-- Pinned Context Header with Thread Controls -->
+                <div class="p-3 p-md-4 border-bottom bg-white">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                        <div>
+                            <span class="badge bg-primary text-uppercase px-2 py-1 mb-1">Claim #{{ selected_case.case_number }}</span>
+                            <h5 class="fw-bold text-dark mb-0">Client: {{ selected_case.client.first_name }} {{ selected_case.client.last_name }}</h5>
+                        </div>
+                        
+                        <!-- Thread State & Test Actions (Staff Only) -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            {% if not is_client %}
+                                <a href="{% url 'api_simulate_incoming' selected_case.id %}" class="btn btn-sm btn-outline-warning text-dark border-warning px-2.5 py-1 small" title="Simulates an incoming message from the client to trigger unread indicators">
+                                    + Simulate Client Msg
+                                </a>
+                                {% if selected_case.messages.all %}
+                                    <a href="{% url 'api_mark_thread_unread' selected_case.id %}" class="btn btn-sm btn-outline-danger px-2.5 py-1 small" title="Flags the latest message as unread">
+                                        Mark Unread
+                                    </a>
+                                    <a href="{% url 'api_mark_thread_read' selected_case.id %}" class="btn btn-sm btn-outline-secondary px-2.5 py-1 small" title="Marks all messages in this case as read">
+                                        Mark Read
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                            <span class="badge bg-dark text-white px-3 py-2">
+                                {{ selected_case.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 small text-secondary">
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted d-block">Phone:</span>
+                            <strong class="text-dark">{{ selected_case.client.phone|default:"Not provided" }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted d-block">Email:</span>
+                            <strong class="text-dark">{{ selected_case.client.email|default:"Not provided" }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted d-block">Assigned Attorney:</span>
+                            <strong class="text-dark">{{ selected_case.assigned_attorney.get_full_name|default:"Vinny Gambini" }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted d-block">Case Coordinator:</span>
+                            <strong class="text-dark">{{ selected_case.assigned_case_manager.get_full_name|default:"Dayana Becerra" }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat History Canvas -->
+                <div class="chat-scroll-canvas">
+                    {% if messages_feed %}
+                        {% for msg in messages_feed %}
+                            {% if msg.sender == user %}
+                                <!-- Outgoing Message (You) -->
+                                <div class="bubble-row">
+                                    <div class="bubble-staff">
+                                        <div class="d-flex justify-content-between align-items-center mb-1 gap-3">
+                                            <span class="fw-bold" style="font-size: 0.72rem; color: #FBBF24;">You (Staff)</span>
+                                            <span style="font-size: 0.68rem; opacity: 0.75;">{{ msg.created_at|date:"M d - g:i A" }}</span>
+                                        </div>
+                                        <p class="mb-0 small" style="white-space: pre-wrap; line-height: 1.55;">{{ msg.body }}</p>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Incoming Message (Client) -->
+                                <div class="bubble-row">
+                                    <div class="bubble-client {% if not msg.is_read %}is-unread-fresh{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-center mb-1 gap-3">
+                                            <div class="d-flex align-items-center gap-1.5">
+                                                <strong class="text-dark" style="font-size: 0.75rem;">
+                                                    {{ msg.sender.get_full_name|default:msg.sender.username }}
+                                                </strong>
+                                                <span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">
+                                                    {{ msg.sender.get_role_display|default:"Client" }}
+                                                </span>
+                                                {% if not msg.is_read %}
+                                                    <span class="badge-unread-glow">UNREAD</span>
+                                                {% endif %}
+                                            </div>
+                                            <span class="text-muted" style="font-size: 0.68rem;">{{ msg.created_at|date:"M d - g:i A" }}</span>
+                                        </div>
+                                        <p class="mb-0 text-dark small" style="white-space: pre-wrap; line-height: 1.55;">{{ msg.body }}</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i data-lucide="message-square" style="width: 32px; height: 32px;" class="mb-2 text-secondary opacity-50"></i>
+                            <p class="mb-0 small fw-medium">No messages recorded for this case file yet.</p>
+                            <span class="small text-muted">Send a message below or click "+ Simulate Client Msg" above to test incoming alerts.</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Composer -->
+                <div class="p-3 bg-white border-top">
+                    <form action="{% url 'send_case_message' selected_case.id %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'inbox' %}?case_id={{ selected_case.id }}">
+                        <div class="mb-2">
+                            <textarea name="body" class="form-control form-control-sm" rows="3" placeholder="Compose message regarding Case #{{ selected_case.case_number }}..." required></textarea>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted" style="font-size: 0.72rem;">Messages are recorded in the permanent case ledger.</span>
+                            <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
+                                Send Message
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        {% else %}
+            <div class="inbox-card p-5 text-center text-muted">
+                <h5>No case selected.</h5>
+                <p class="mb-0 small">Select a file from the directory to review messages.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

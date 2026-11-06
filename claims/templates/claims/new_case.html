@@ -1,0 +1,204 @@
+{% extends "claims/layout.html" %}
+
+{% block title %}New Case Intake | LegalCRM{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+    <div>
+        <h3 class="fw-bold mb-1">New Claim Intake</h3>
+        <p class="text-muted small mb-0">Register client, record passengers, and establish litigation tracking file.</p>
+    </div>
+    <a href="{% url 'index' %}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+        Cancel
+    </a>
+</div>
+
+<form method="POST" class="card border-0 shadow-sm p-4 p-md-5">
+    {% csrf_token %}
+
+    <!-- 1. Primary Client Profile -->
+    <h5 class="fw-bold text-dark border-bottom pb-2 mb-4">1. Primary Client & Portal Setup</h5>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">First Name *</label>
+            <input type="text" name="first_name" class="form-control" required placeholder="Carlos">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Last Name *</label>
+            <input type="text" name="last_name" class="form-control" required placeholder="Santana">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Date of Birth (DOB) *</label>
+            <input type="date" name="client_dob" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Phone Number *</label>
+            <input type="text" name="phone" class="form-control" required placeholder="(404) 555-0199">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Email Address (Used as Portal Login) *</label>
+            <input type="email" name="email" class="form-control" required placeholder="carlos@example.com">
+            <div class="form-text small" style="font-size: 0.72rem;">This email is used directly to log in and receive 6-digit verification codes.</div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">Driver's License #</label>
+            <input type="text" name="client_dl" class="form-control" placeholder="DL-0928172">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">Temporary Portal Password</label>
+            <input type="text" name="client_password" class="form-control" value="ClientPass123!">
+        </div>
+    </div>
+
+    <!-- 2. Incident Details -->
+    <h5 class="fw-bold text-dark border-bottom pb-2 mb-4">2. Incident Details</h5>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">Date of Incident</label>
+            <input type="date" name="incident_date" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">Police Report #</label>
+            <input type="text" name="police_report_number" class="form-control" placeholder="APD-2026-9921">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">Accident Location</label>
+            <input type="text" name="accident_location" class="form-control" placeholder="I-285 at Exit 39">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Emergency Room / Hospital</label>
+            <input type="text" name="er_facility" class="form-control" placeholder="Grady Memorial Hospital">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Ambulance Transport</label>
+            <input type="text" name="ambulance_provider" class="form-control" placeholder="Grady EMS">
+        </div>
+        <div class="col-12">
+            <label class="form-label small fw-bold">Accident Description</label>
+            <textarea name="accident_description" class="form-control" rows="2" placeholder="Summary of collision facts..."></textarea>
+        </div>
+    </div>
+
+    <!-- 3. Insurance & Team Assignment -->
+    <h5 class="fw-bold text-dark border-bottom pb-2 mb-4">3. Insurance & Team Assignment</h5>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">At-Fault Insurance Carrier</label>
+            <input type="text" name="insurance_carrier" class="form-control" placeholder="State Farm / GEICO">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">Policy #</label>
+            <input type="text" name="policy_number" class="form-control" placeholder="POL-9928172">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">Claim #</label>
+            <input type="text" name="claim_number" class="form-control" placeholder="CLM-001298">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Lead Attorney (Required to advance past Intake)</label>
+            <select name="assigned_attorney" class="form-select">
+                <option value="">-- Assign Later --</option>
+                {% for atty in attorneys %}
+                    <option value="{{ atty.id }}">{{ atty.get_full_name|default:atty.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Case Manager</label>
+            <select name="assigned_case_manager" class="form-select">
+                <option value="">-- Assign Later --</option>
+                {% for cm in case_managers %}
+                    <option value="{{ cm.id }}">{{ cm.get_full_name|default:cm.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- 4. Passengers (With Automatic Minor / Adult DOB Logic) -->
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <div>
+            <h5 class="fw-bold text-dark mb-0">4. Vehicle Passengers & Dependents</h5>
+            <span class="text-muted small">Minors (< 18) remain under parent file; Adults (18+) automatically spawn independent case.</span>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="addPassengerRow()">
+            + Add Passenger
+        </button>
+    </div>
+
+    <div id="passengers-container" class="d-flex flex-column gap-3 mb-4">
+        <!-- Passenger row template populated via JS -->
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+        <a href="{% url 'index' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+        <button type="submit" class="btn btn-primary px-5 fw-semibold">Complete Intake</button>
+    </div>
+</form>
+
+<script>
+    let passengerCount = 0;
+
+    function addPassengerRow() {
+        passengerCount++;
+        const container = document.getElementById('passengers-container');
+        const row = document.createElement('div');
+        row.className = 'p-3 bg-light rounded-3 border passenger-item position-relative';
+        row.id = `passenger-${passengerCount}`;
+
+        row.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="small text-secondary text-uppercase">Passenger #${passengerCount}</strong>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="document.getElementById('passenger-${passengerCount}').remove()">Remove</button>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold mb-1">Full Name *</label>
+                    <input type="text" name="passenger_name" class="form-control form-control-sm" required placeholder="Passenger Name">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold mb-1">Date of Birth (DOB) *</label>
+                    <input type="date" name="passenger_dob" class="form-control form-control-sm dob-input" onchange="calculatePassengerAge(this, ${passengerCount})" required>
+                    <div id="age-badge-${passengerCount}" class="mt-1 small"></div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">Phone</label>
+                    <input type="text" name="passenger_phone" class="form-control form-control-sm" placeholder="(404) 555-0100">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold mb-1">Email <span class="text-muted fw-normal">(Req for 18+)</span></label>
+                    <input type="email" name="passenger_email" class="form-control form-control-sm passenger-email-input" placeholder="passenger@example.com">
+                </div>
+                <div class="col-12 mt-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="passenger_injured" value="true" id="injured-${passengerCount}">
+                        <label class="form-check-label small" for="injured-${passengerCount}">Injured & Requiring Medical Management</label>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function calculatePassengerAge(input, rowId) {
+        const badge = document.getElementById(`age-badge-${rowId}`);
+        if (!input.value) {
+            badge.innerHTML = '';
+            return;
+        }
+
+        const dob = new Date(input.value);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        if (age < 18) {
+            badge.innerHTML = `<span class="badge bg-success bg-opacity-10 text-success fw-semibold">Minor (${age} yrs) &bull; Managed Under Parent File</span>`;
+        } else {
+            badge.innerHTML = `<span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">Adult (${age} yrs) &bull; Auto-Spawns Separate Case File</span>`;
+        }
+    }
+</script>
+{% endblock %}

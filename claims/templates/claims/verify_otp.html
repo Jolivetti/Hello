@@ -1,0 +1,55 @@
+{% extends "claims/layout.html" %}
+
+{% block title %}Verify Device | LegalCRM{% endblock %}
+
+{% block body %}
+<div class="row justify-content-center py-5">
+    <div class="col-12 col-md-5 col-lg-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex p-3 rounded-circle bg-primary bg-opacity-10 text-primary mb-2">
+                        <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-1">Verify Your Device</h4>
+                    <p class="text-muted small mb-0">
+                        A 6-digit authentication code was sent to your email. Enter it below to access your file.
+                    </p>
+                </div>
+
+                {% if error_message %}
+                    <div class="alert alert-danger py-2 px-3 small rounded-2 mb-3">
+                        {{ error_message }}
+                    </div>
+                {% endif %}
+
+                <form method="POST" action="{% url 'verify_otp' %}">
+                    {% csrf_token %}
+                    <div class="mb-3 text-center">
+                        <label class="form-label small fw-bold text-secondary text-uppercase mb-2">6-Digit Security Code</label>
+                        <input type="text" 
+                               name="otp_code" 
+                               class="form-control text-center font-monospace fs-4 fw-bold letter-spacing-lg" 
+                               maxlength="6" 
+                               placeholder="••••••" 
+                               required 
+                               autofocus 
+                               autocomplete="one-time-code">
+                        <div class="form-text small mt-2" style="font-size: 0.72rem;">
+                            Testing locally? Check your VS Code terminal running the server to read the printed code.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold mt-2">
+                        Verify Code & Sign In
+                    </button>
+                </form>
+
+                <div class="mt-4 pt-3 border-top text-center">
+                    <a href="{% url 'login' %}" class="small text-muted text-decoration-none">&larr; Return to Sign In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
